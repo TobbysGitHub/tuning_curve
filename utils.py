@@ -4,6 +4,11 @@ from tensorboard.compat.proto.summary_pb2 import Summary, HistogramProto
 from torch.utils.tensorboard import SummaryWriter
 
 
+def needs_posting(step):
+    assert step >= 0
+    return step % int(np.sqrt(step) + 1) == 0
+
+
 def add_plot(writer: SummaryWriter, tag, values, global_step):
     torch._C._log_api_usage_once("tensorboard.logging.add_histogram")
     bins = [float(i) for i in range(len(values) + 1)]

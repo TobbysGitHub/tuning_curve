@@ -2,12 +2,16 @@ import torch
 import torch.nn as nn
 
 
-class MutualInfoLoss(nn.Module):
-    def __init__(self):
-        super().__init__()
+def alpha_loss_fn(pr_last, pr, q, alpha):
+    return -(pr_last * torch.log(pr / q) * alpha).mean()
 
-    def forward(self, pr_last, pr, q, alpha):
-        return -(pr_last * torch.log(pr / q) * alpha).mean()
+
+def squared_loss_fn(x1, x2):
+    return torch.pow(x1 - x2, 2).mean()
+
+
+def alpha_mean_loss_fn(pr_mean, pr_prior, alpha):
+    return -((pr_prior - pr_mean) * alpha).mean()
 
 
 class L2Regularization(nn.Module):
