@@ -1,4 +1,5 @@
 import numpy as np
+import torch.cuda
 
 from torch import optim
 from torch.nn.functional import mse_loss
@@ -8,6 +9,9 @@ from data import DataLoader
 from model import EncodeModule, LateralModule, MartingaleModule, SquashModule
 from losses import *
 from torch.utils.tensorboard import SummaryWriter
+
+# cuda
+cuda = torch.cuda.is_available()
 
 # set seeds
 np.random.seed(1)
@@ -30,6 +34,9 @@ if __name__ == '__main__':
     lateral_module = LateralModule(units, ratio_min_2, ratio_max_2)
     martingale_module = MartingaleModule(units, ratio_min_2, ratio_max_2)
     squash_module = SquashModule(ratio_min_2, ratio_max_2, squash_factor)
+    if cuda:
+        for m in (encode_module, lateral_module, martingale_module, squash_module):
+            m.cuda()
     # loss
     weight_decay = 1e-2
     l2_alpha_fn = L2Regularization(encode_module.weight, weight_decay)
@@ -45,6 +52,8 @@ if __name__ == '__main__':
 
     pr_last = None
     for step, data in enumerate(dataloader):
+        if cuda:
+            data.cuda()
         alpha, pr = encode_module(data, pr_last)
         q = lateral_module(pr)
         pr_mean = martingale_module()  # (units,)
