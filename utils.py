@@ -17,7 +17,7 @@ def needs_posting(step):
 def add_plot(writer: SummaryWriter, tag, values, global_step):
     torch._C._log_api_usage_once("tensorboard.logging.add_histogram")
     bins = [float(i) for i in range(len(values) + 1)]
-    values = values.detach().numpy().reshape(-1)
+    values = values.detach().cpu().numpy().reshape(-1)
     counts = np.concatenate([[0], values])
     writer._get_file_writer().add_summary(
         _histogram(tag, counts, bins), global_step, None)
