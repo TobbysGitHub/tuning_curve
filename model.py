@@ -45,12 +45,15 @@ class LateralModule(nn.Module):
         self.units = units
         self.ratio_min = ratio_min
         self.ratio_max = ratio_max
+        self.weight = nn.Parameter(torch.zeros(units, units))  # (units, units)
         self.bias = nn.Parameter(torch.ones(units) * _estimate_prior(ratio_min, ratio_max))
+        self.register_buffer('eye_mask', torch.ones(units, units) - torch.eye(units, units))  # (units, units)
 
-    def forward(self, x: torch.Tensor):
-        batch_size = x.shape[0]
-        self.bias.data.clamp_(self.ratio_min, self.ratio_max)
-        return self.bias.expand(batch_size, self.units)
+    def forward(self, pr: torch.Tensor):
+        pulse = torch.bernoulli(pr.clamp(0, 1))  # (batch_size, units)
+        output = pulse @ (self.weight * self.eye_mask) + self.bias
+        output.data.clamp_(self.ratio_min, self.ratio_max)
+        return output
 
 
 class MartingaleModule(nn.Module):

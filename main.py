@@ -22,7 +22,7 @@ if __name__ == '__main__':
     batch_size = 256
     dataloader = DataLoader(dots, ratio_min_1, ratio_max_1, batch_size, brown_speed=0.0)
     # modules
-    units = 1
+    units = 2
     ratio_min_2 = 0.01
     ratio_max_2 = 0.1
     squash_factor = 0.5
@@ -34,12 +34,12 @@ if __name__ == '__main__':
     weight_decay = 1e-2
     l2_alpha_fn = L2Regularization(encode_module.weight, weight_decay)
     # optim
-    lr1 = 1
+    lr1 = 1e-1
     lr2 = 1e-2
     optim_q = optim.SGD(lateral_module.parameters(), lr=lr1, momentum=0.5)
     optim_alpha = optim.SGD(encode_module.parameters(), lr=lr2)
     optim_mean = optim.SGD(martingale_module.parameters(), lr=lr1, momentum=0.5)
-    optim_alpha_mean = optim.Adam(encode_module.parameters())
+    optim_alpha_mean = optim.SGD(encode_module.parameters(), lr=lr2, momentum=0.9)
     # writer
     writer = SummaryWriter()
 
@@ -70,12 +70,13 @@ if __name__ == '__main__':
         pr_last = squash_module(pr)
 
         writer.add_scalar(tag='loss_q', scalar_value=loss_q, global_step=step)
-        writer.add_scalar(tag='loss_mean', scalar_value=loss_mean, global_step=step)
         if utils.needs_posting(step):
             writer.add_histogram(tag='q', values=q, global_step=step)
             writer.add_histogram(tag='pr_mean', values=pr_mean, global_step=step)
             writer.add_histogram(tag='alpha', values=alpha, global_step=step)
             writer.add_histogram(tag='pr', values=pr, global_step=step)
             writer.add_histogram(tag='weight', values=encode_module.weight, global_step=step)
-            utils.add_plot(writer, tag='dot_weight', values=encode_module.weight, global_step=step)
+            writer.add_histogram(tag='l_weight', values=lateral_module.weight, global_step=step)
+            utils.add_plot(writer, tag='dot_weight', values=encode_module.weight[:, 0], global_step=step)
+            utils.add_plot(writer, tag='dot_weight1', values=encode_module.weight[:, 1], global_step=step)
     pass
