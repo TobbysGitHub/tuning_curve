@@ -26,7 +26,7 @@ class EncodeModule(nn.Module):
         :return:
         """
         if pr_last is None:
-            pr_last = torch.ones(si.shape[0], self.units) * self.ratio_prior
+            pr_last = torch.ones(si.shape[0], self.units, device=si.device) * self.ratio_prior
         alpha = si @ self.weight + 1  # (batch_size * units)
         alpha = self.reciprocal_relu(alpha)
         pr = pr_last * alpha.detach()  # (batch_size * units)

@@ -11,7 +11,7 @@ from losses import *
 from torch.utils.tensorboard import SummaryWriter
 
 # cuda
-cuda = torch.cuda.is_available()
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 # set seeds
 np.random.seed(1)
@@ -24,19 +24,17 @@ if __name__ == '__main__':
     ratio_min_1 = 1 / dots
     ratio_max_1 = 5 / dots
     batch_size = 256
-    dataloader = DataLoader(dots, ratio_min_1, ratio_max_1, batch_size, brown_speed=0.0)
+    dataloader = DataLoader(dots, ratio_min_1, ratio_max_1, batch_size, device, brown_speed=0.0)
     # modules
     units = 2
     ratio_min_2 = 0.01
     ratio_max_2 = 0.1
     squash_factor = 0.5
-    encode_module = EncodeModule(dots, units, ratio_min_2, ratio_max_2)
-    lateral_module = LateralModule(units, ratio_min_2, ratio_max_2)
-    martingale_module = MartingaleModule(units, ratio_min_2, ratio_max_2)
-    squash_module = SquashModule(ratio_min_2, ratio_max_2, squash_factor)
-    if cuda:
-        for m in (encode_module, lateral_module, martingale_module, squash_module):
-            m.cuda()
+    encode_module = EncodeModule(dots, units, ratio_min_2, ratio_max_2).to(device)
+    lateral_module = LateralModule(units, ratio_min_2, ratio_max_2).to(device)
+    martingale_module = MartingaleModule(units, ratio_min_2, ratio_max_2).to(device)
+    squash_module = SquashModule(ratio_min_2, ratio_max_2, squash_factor).to(device)
+
     # loss
     weight_decay = 1e-2
     l2_alpha_fn = L2Regularization(encode_module.weight, weight_decay)
@@ -52,8 +50,6 @@ if __name__ == '__main__':
 
     pr_last = None
     for step, data in enumerate(dataloader):
-        if cuda:
-            data.cuda()
         alpha, pr = encode_module(data, pr_last)
         q = lateral_module(pr)
         pr_mean = martingale_module()  # (units,)
