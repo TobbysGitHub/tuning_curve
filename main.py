@@ -75,7 +75,7 @@ if __name__ == '__main__':
             writer.add_histogram(tag='pr', values=pr, global_step=step)
             writer.add_histogram(tag='weight', values=encode_module.weight, global_step=step)
             writer.add_histogram(tag='l_weight', values=lateral_module.weight, global_step=step)
-            utils.add_plot(writer, tag='dot_weight', values=encode_module.weight[:, 0], global_step=step)
-            if units > 1:
-                utils.add_plot(writer, tag='dot_weight1', values=encode_module.weight[:, 1], global_step=step)
+            utils.add_diff_histogram(writer, tag='pos_diff', values=encode_module.weight, global_step=step)
+            for i in range(units):
+                utils.add_plot(writer, tag='dot_weight/' + str(i), values=encode_module.weight[:, i], global_step=step)
     pass
