@@ -17,7 +17,7 @@ def is_posting(step):
 def add_plot(writer: SummaryWriter, tag, values, global_step):
     torch._C._log_api_usage_once("tensorboard.logging.add_histogram")
     bins = [float(i) for i in range(len(values) + 1)]
-    values = values.detach().cpu().numpy().reshape(-1)
+    values = values.detach().cpu().numpy()
     counts = np.concatenate([[0], values])
     writer._get_file_writer().add_summary(
         _histogram(tag, counts, bins), global_step, None)
@@ -37,3 +37,18 @@ def _make_histogram(counts, bins):
                           sum_squares=(counts * bins * bins).sum(),
                           bucket_limit=bins,
                           bucket=counts.tolist())
+
+
+def add_diff_histogram(writer: SummaryWriter, tag, values, global_step):
+    """
+    :param writer:
+    :param tag:
+    :param values: (dots, units)
+    :param global_step:
+    """
+    dots = values.size()[0]
+    values = values.detach().cpu().numpy()
+    center_point = np.argmax(values, axis=0)  # (units,)
+    center_point.sort()
+    diff = np.diff(center_point, append=center_point[0] + dots)
+    writer.add_histogram(tag=tag, values=diff, global_step=global_step)
