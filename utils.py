@@ -7,7 +7,7 @@ from tensorboard.compat.proto.summary_pb2 import Summary, HistogramProto
 from torch.utils.tensorboard import SummaryWriter
 
 
-def needs_posting(step):
+def is_posting(step):
     assert step >= 0
     if step < 10:
         return True
