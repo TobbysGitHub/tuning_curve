@@ -50,7 +50,7 @@ class LateralModule(nn.Module):
     def forward(self, pr: torch.Tensor):
         pulse = torch.bernoulli(pr.clamp(0, 1))  # (batch_size, units)
         output = pulse @ (self.weight * self.eye_mask) + self.bias
-        output.data.clamp_(self.ratio_min, self.ratio_max)
+        output.data.clamp_(self.ratio_min, self.ratio_max)  # (batch_size, units)
         return output
 
 
