@@ -28,17 +28,19 @@ if __name__ == '__main__':
     dataloader = DataLoader(dots, ratio_min_1, ratio_max_1, batch_size, device, brown_speed=0.0)
     # modules
     units = 2
-    ratio_min_2 = 0.01
+    ratio_min_2 = 0.0
     ratio_max_2 = 0.1
-    squash_factor = 0.5
     encode_module = EncodeModule(dots, units, ratio_min_2, ratio_max_2).to(device)
     lateral_module = LateralModule(units, ratio_min_2, ratio_max_2).to(device)
+    squash_factor = (0.1, 0.5)
+    squash_slope = 0.95
     martingale_module = MartingaleModule(units, ratio_min_2, ratio_max_2).to(device)
-    squash_module = SquashModule(ratio_min_2, ratio_max_2, squash_factor).to(device)
+    squash_module = SquashModule(ratio_min_2, ratio_max_2, squash_factor, squash_slope).to(
+        device)
     # optim
     lr1 = 1e-1
     lr2 = 2.5e-2
-    weight_decay = 4e-2
+    weight_decay = 5e-1 / dots
     optimizer = optim.SGD(
         [{'params': (*lateral_module.parameters(), *martingale_module.parameters()), 'lr': lr1, 'momentum': 0.5},
          {'params': encode_module.parameters(), 'lr': lr2, 'momentum': 0.5}])
@@ -78,5 +80,7 @@ if __name__ == '__main__':
             tb_utils.add_diff_histogram(writer, tag='pos_diff', values=encode_module.weight, global_step=step)
             for i in range(units):
                 tb_utils.add_plot(writer, tag='dot_weight/' + str(i), values=encode_module.weight[:, i],
+                                  global_step=step)
+                tb_utils.add_plot(writer, tag='batch_repr/' + str(i), values=pr[:, i],
                                   global_step=step)
     pass

@@ -17,7 +17,7 @@ class EncodeModule(nn.Module):
 
     def reset_parameter(self):
         with torch.no_grad():
-            return self.weight.normal_(0, 0.1)
+            return self.weight.normal_(0, 0.03)
 
     def forward(self, si: torch.Tensor, pr_last: torch.Tensor):
         """
@@ -41,7 +41,7 @@ class LateralModule(nn.Module):
     def __init__(self, units, ratio_min, ratio_max):
         super().__init__()
         self.units = units
-        self.ratio_min = ratio_min
+        self.ratio_min = max(ratio_min, 0.01)
         self.ratio_max = ratio_max
         self.weight = nn.Parameter(torch.zeros(units, units))  # (units, units)
         self.bias = nn.Parameter(torch.ones(units) * _estimate_prior(ratio_min, ratio_max))
@@ -65,24 +65,27 @@ class MartingaleModule(nn.Module):
 
 
 class SquashModule(nn.Module):
-    def __init__(self, ratio_min, ratio_max, squash_factor=2):
+    def __init__(self, ratio_min, ratio_max, squash_factor=(0.1, 0.5), squash_slope=1.0):
         super().__init__()
         self.ratio_min = ratio_min
         self.ratio_max = ratio_max
         self.ratio_prior = _estimate_prior(ratio_min, ratio_max)
         self.squash_factor = squash_factor
+        self.squash_slope = squash_slope
 
     def forward(self, x):
-        return self._squash(x, self.ratio_min, self.ratio_max, self.ratio_prior, self.squash_factor)
+        return self._squash(x, self.ratio_min, self.ratio_max, self.ratio_prior, self.squash_factor, self.squash_slope)
 
     @staticmethod
-    def _squash(x, value_min: float, value_max: float, value_inflection: float, factor=0.9):
-        def half_squash(x_):
-            if factor < 1:
-                return (1 - factor) * (1 - torch.relu(1 - x_)) + factor * torch.tanh(x_)
-            else:
-                # return torch.nan_to_num(torch.tanh((torch.sqrt(1 + 4 * factor * x_) - 1) / (2 * factor)))
-                return torch.tanh(x / factor)
+    def _squash(x, value_min: float, value_max: float, value_inflection: float, factor=(0.1, 0.5), slope=1.0):
+        def half_squash(half_factor):
+            def half_squash_factorized(x_):
+                x_ = slope * x_
+                fn = torch.tanh
+                # fn = lambda val: val / (1 + val.abs())
+                return (1 - half_factor) * (1 - torch.relu(1 - x_)) + half_factor * fn(x_)
+
+            return half_squash_factorized
 
         def rst_op(func, scale, trans, reflect=False):
             def reflect_op(f):
@@ -99,9 +102,9 @@ class SquashModule(nn.Module):
             else:
                 return trans_op(scale_op(func))
 
-        return (x >= value_inflection) * rst_op(half_squash, value_max - value_inflection, value_inflection)(x) + \
-               (x < value_inflection) * rst_op(half_squash, value_inflection - value_min, value_inflection,
-                                               reflect=True)(x)
+        return (x >= value_inflection) * rst_op(half_squash(factor[1]), value_max - value_inflection, value_inflection)(
+            x) + (x < value_inflection) * rst_op(half_squash(factor[0]), value_inflection - value_min, value_inflection,
+                                                 reflect=True)(x)
 
 
 def _estimate_prior(ratio_min, ratio_max):
